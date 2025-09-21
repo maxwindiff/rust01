@@ -52,6 +52,10 @@ impl<T> List<T> {
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut { curr: self.head.as_deref_mut() }
     }
+
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter { list: self }
+    }
 }
 
 pub struct Iter<'a, T> {
@@ -83,6 +87,18 @@ impl<'a, T> Iterator for IterMut<'a, T> {
         };
         self.curr = node.next.as_deref_mut();
         Some(&mut node.data)
+    }
+}
+
+pub struct IntoIter<T> {
+    list: List<T>
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.list.pop_front()
     }
 }
 
