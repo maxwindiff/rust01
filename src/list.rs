@@ -102,7 +102,15 @@ impl<T> Iterator for IntoIter<T> {
     }
 }
 
-#[cfg(test)]
+impl<T> IntoIterator for List<T> {
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter { list: self }
+    }
+}
+
 mod tests {
     use super::List;
 
@@ -168,6 +176,7 @@ mod tests {
         list.pop_front(); // Pop from empty list
         assert_eq!(list.len(), 0);
     }
+
     #[test]
     fn test_peek_front_mut() {
         let mut list = List::new();
@@ -185,6 +194,7 @@ mod tests {
         *list.peek_front_mut().unwrap() = 100;
         assert_eq!(list.peek_front(), Some(&100));
     }
+
     #[test]
     fn test_clear() {
         let mut list = List::new();
@@ -258,5 +268,19 @@ mod tests {
         let mut single_iter = single_list.iter();
         assert_eq!(single_iter.next(), Some(&43));
         assert_eq!(single_iter.next(), None);
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let mut list = List::new();
+        list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
+
+        let mut vec = Vec::new();
+        for val in list {
+            vec.push(val);
+        }
+        assert_eq!(vec, vec![3, 2, 1]);
     }
 }
