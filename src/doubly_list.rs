@@ -76,6 +76,60 @@ impl<T: Debug> LinkedList<T> {
         }
         Some(Rc::into_inner(old_tail)?.into_inner().data)
     }
+
+    pub fn cursor_front(&mut self) -> Cursor<'_, T> {
+        let current = self.head.clone();
+        Cursor {
+            list: self,
+            current: current,
+        }
+    }
+}
+
+pub struct Cursor<'a, T: Debug> {
+    list: &'a mut LinkedList<T>,
+    current: Option<NodeRef<T>>,
+}
+
+// the cursor is expected to act as if it is at the position of an element
+// and it also has to work with and be able to insert into an empty list.
+impl<T: Debug> Cursor<'_, T> {
+    /// Take a mutable reference to the current element
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.current.as_deref().and_then(|cell| {
+            // This is safe because we have exclusive access to the list
+            // through the mutable reference in the cursor.
+            unsafe { cell.as_ptr().as_mut() }
+        }).map(|node| &mut node.data)
+    }
+
+    /// Move one position forward (towards the back) and
+    /// return a reference to the new position
+    pub fn next(&mut self) -> Option<&mut T> {
+        self.current = self.current.as_ref().and_then(|node| node.borrow().next.clone());
+        self.peek_mut()
+    }
+
+    /// Move one position backward (towards the front) and
+    /// return a reference to the new position
+    pub fn prev(&mut self) -> Option<&mut T> {
+        todo!()
+    }
+
+    /// Remove and return the element at the current position and move the cursor
+    /// to the neighboring element that's closest to the back. This can be
+    /// either the next or previous position.
+    pub fn take(&mut self) -> Option<T> {
+        todo!()
+    }
+
+    pub fn insert_after(&mut self, _element: T) {
+        todo!()
+    }
+
+    pub fn insert_before(&mut self, _element: T) {
+        todo!()
+    }
 }
 
 impl<T: Debug> Debug for Node<T> {
@@ -172,5 +226,96 @@ mod tests {
         assert_eq!(list.pop_back(), Some(4));
         assert_eq!(list.pop_front(), Some(3));
         assert_eq!(list.pop_back(), None);
+    }
+
+    #[test]
+    fn test_cursor_peek_mut() {
+        let mut list = LinkedList::new();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+
+        let mut cursor = list.cursor_front();
+        assert_eq!(cursor.peek_mut(), Some(&mut 1));
+
+        if let Some(val) = cursor.peek_mut() {
+            *val = 10;
+        }
+        assert_eq!(cursor.peek_mut(), Some(&mut 10));
+    }
+
+    #[test]
+    fn test_cursor_peek_mut_empty() {
+        let mut list: LinkedList<i32> = LinkedList::new();
+        let mut cursor = list.cursor_front();
+        assert_eq!(cursor.peek_mut(), None);
+    }
+
+    #[test]
+    fn test_cursor_next() {
+        let mut list = LinkedList::new();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+
+        let mut cursor = list.cursor_front();
+        assert_eq!(cursor.peek_mut(), Some(&mut 1));
+        assert_eq!(cursor.next(), Some(&mut 2));
+        assert_eq!(cursor.next(), Some(&mut 3));
+        assert_eq!(cursor.next(), None);
+    }
+
+    #[test]
+    fn test_cursor_next_empty() {
+        let mut list: LinkedList<i32> = LinkedList::new();
+        let mut cursor = list.cursor_front();
+        assert_eq!(cursor.next(), None);
+    }
+
+    #[test]
+    fn test_cursor_next_mutate() {
+        let mut list = LinkedList::new();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+
+        let mut cursor = list.cursor_front();
+        cursor.next();
+        if let Some(val) = cursor.peek_mut() {
+            *val = 20;
+        }
+
+        drop(cursor);
+
+        assert_eq!(list.pop_front(), Some(1));
+        assert_eq!(list.pop_front(), Some(20));
+        assert_eq!(list.pop_front(), Some(3));
+    }
+
+    #[test]
+    fn test_cursor_peek_mut_and_next_combined() {
+        let mut list = LinkedList::new();
+        list.push_back(10);
+        list.push_back(20);
+        list.push_back(30);
+
+        let mut cursor = list.cursor_front();
+
+        if let Some(val) = cursor.peek_mut() {
+            *val += 5;
+        }
+        assert_eq!(cursor.peek_mut(), Some(&mut 15));
+
+        if let Some(val) = cursor.next() {
+            *val += 5;
+        }
+        assert_eq!(cursor.peek_mut(), Some(&mut 25));
+
+        if let Some(val) = cursor.next() {
+            *val += 5;
+        }
+        assert_eq!(cursor.peek_mut(), Some(&mut 35));
+
+        assert_eq!(cursor.next(), None);
     }
 }
